@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rail Routes</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <section id="home" class="screen">
+    <div class="panel home-panel">
+      <h1>Rail Routes</h1>
+      <p class="sub">Build train routes across the map with 2–8 friends.</p>
+      <label>Your name <input id="name-input" maxlength="20" autocomplete="nickname"></label>
+      <button id="create-btn" class="primary">Create a room</button>
+      <div class="divider">or join one</div>
+      <div class="row">
+        <input id="code-input" maxlength="4" placeholder="CODE">
+        <button id="join-btn">Join</button>
+      </div>
+      <p id="home-error" class="error"></p>
+    </div>
+  </section>
+
+  <section id="lobby" class="screen hidden">
+    <div class="panel lobby-panel">
+      <p class="sub">Room code</p>
+      <div id="lobby-code" class="room-code"></div>
+      <p class="sub">Send this code or the invite link to your friends (2–8 players).</p>
+      <button id="invite-btn">Copy invite link</button>
+      <ul id="lobby-players" class="lobby-players"></ul>
+      <button id="start-btn" class="primary">Start game</button>
+      <p id="lobby-wait" class="sub">Waiting for the host to start…</p>
+      <button id="leave-btn" class="link">Leave room</button>
+    </div>
+  </section>
+
+  <section id="game" class="screen hidden">
+    <header class="topbar">
+      <div id="status" class="status"></div>
+      <div class="room-tag">Room <strong id="game-code"></strong></div>
+    </header>
+    <main class="layout">
+      <div class="board-wrap">
+        <svg id="board" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <aside class="sidebar">
+        <div class="box">
+          <h2>Players</h2>
+          <ul id="players" class="players"></ul>
+        </div>
+        <div class="box">
+          <h2>Cards</h2>
+          <div id="market" class="market"></div>
+        </div>
+        <div class="box">
+          <h2>Your hand</h2>
+          <div id="hand" class="hand"></div>
+        </div>
+        <div class="box">
+          <div class="box-head">
+            <h2>Your tickets</h2>
+            <div class="row">
+              <button id="pass-btn" class="small hidden">Pass</button>
+              <button id="draw-tickets-btn" class="small">Draw tickets</button>
+            </div>
+          </div>
+          <ul id="tickets" class="tickets"></ul>
+        </div>
+        <div class="box">
+          <h2>Log</h2>
+          <ul id="log" class="log"></ul>
+        </div>
+      </aside>
+    </main>
+  </section>
+
+  <div id="modal-backdrop" class="modal-backdrop hidden">
+    <div id="modal" class="modal panel"></div>
+  </div>
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="client.js"></script>
+</body>
+</html>
