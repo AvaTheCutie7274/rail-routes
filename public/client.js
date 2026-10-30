@@ -2,7 +2,6 @@ const COLOR_HEX = {
   black: '#2d2d2d',
   blue: '#3b82f6',
   green: '#22a04b',
-  grey: '#9ca3af',
   orange: '#f59e0b',
   pink: '#f472b6',
   purple: '#9b59b6',

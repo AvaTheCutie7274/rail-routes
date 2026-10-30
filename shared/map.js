@@ -1,6 +1,6 @@
 // Test map: a small fictional region. Coordinates are in a 1000x700 board space.
 
-const CARD_COLORS = ['black', 'blue', 'green', 'grey', 'orange', 'pink', 'purple', 'red'];
+const CARD_COLORS = ['black', 'blue', 'green', 'orange', 'pink', 'purple', 'red'];
 
 const CITIES = {
   northport:   { name: 'Northport',   x: 100, y: 80 },
@@ -35,7 +35,7 @@ const ROUTE_DEFS = [
   ['northport', 'ironford', 3, 'any'],
   ['frostwick', 'ironford', 2, 'purple'],
   ['frostwick', 'millbrook', 3, 'pink'],
-  ['highcrag', 'millbrook', 2, 'black', 'grey'],
+  ['highcrag', 'millbrook', 2, 'black', 'purple'],
   ['highcrag', 'copperton', 2, 'any'],
   ['pinehollow', 'copperton', 2, 'orange'],
   ['eastmere', 'copperton', 3, 'purple'],
@@ -47,7 +47,7 @@ const ROUTE_DEFS = [
   ['ironford', 'westhaven', 4, 'red'],
   ['millbrook', 'copperton', 3, 'red'],
   ['millbrook', 'lanternfall', 2, 'blue', 'orange'],
-  ['millbrook', 'redrock', 3, 'grey'],
+  ['millbrook', 'redrock', 3, 'black'],
   ['copperton', 'duskvale', 3, 'pink', 'black'],
   ['copperton', 'brightwater', 3, 'any'],
   ['duskvale', 'brightwater', 2, 'purple'],
@@ -57,12 +57,12 @@ const ROUTE_DEFS = [
   ['redrock', 'lanternfall', 3, 'orange', 'purple'],
   ['redrock', 'dunmore', 3, 'red'],
   ['redrock', 'coralbay', 4, 'any'],
-  ['lanternfall', 'brightwater', 3, 'grey'],
+  ['lanternfall', 'brightwater', 3, 'purple'],
   ['lanternfall', 'emberfalls', 3, 'any'],
   ['lanternfall', 'dunmore', 3, 'black'],
   ['brightwater', 'sunreach', 3, 'orange'],
   ['brightwater', 'emberfalls', 3, 'blue', 'red'],
-  ['sunreach', 'southgate', 2, 'grey'],
+  ['sunreach', 'southgate', 2, 'pink'],
   ['coralbay', 'dunmore', 4, 'orange', 'blue'],
   ['dunmore', 'emberfalls', 4, 'pink'],
   ['emberfalls', 'southgate', 3, 'green', 'any'],
