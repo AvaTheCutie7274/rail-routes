@@ -9,6 +9,16 @@ const COLOR_HEX = {
   red: '#e53e3e',
   any: '#e8dcc0',
 };
+// Player colour (from the server) -> train car sprite in public/cars. Sprites are 24x12.
+const CAR_SPRITES = {
+  '#d62828': 'red',
+  '#1d4ed8': 'blue',
+  '#16a34a': 'green',
+  '#facc15': 'yellow',
+  '#222222': 'black',
+  '#f472b6': 'pink',
+  '#f08c00': 'orange',
+};
 const SESSION_KEY = 'railRoutesSession';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -200,15 +210,25 @@ function buildBoard() {
     const gap = 3;
     const carLen = (length - 2 * margin - gap * (r.len - 1)) / r.len;
     const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+    // Turn the sprite around on right-to-left routes so its wheels stay at the bottom.
+    const spriteAngle = Math.abs(angle) > 90 ? angle + 180 : angle;
+    // Sprites keep their 2:1 shape; double routes get smaller ones so the two tracks don't overlap.
+    const carW = Math.min(carLen - 4, r.lane ? 34 : 42);
+    const carH = carW / 2;
 
     const g = svg('g', { class: 'route', 'data-id': r.id });
     for (let i = 0; i < r.len; i++) {
       const along = margin + carLen / 2 + i * (carLen + gap);
       const cx = a.x + ux * along - uy * offset;
       const cy = a.y + uy * along + ux * offset;
-      const transform = `translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${angle.toFixed(1)})`;
+      const at = `translate(${cx.toFixed(1)} ${cy.toFixed(1)})`;
+      const transform = `${at} rotate(${angle.toFixed(1)})`;
       g.append(svg('rect', { x: -carLen / 2, y: -6, width: carLen, height: 12, rx: 2, transform }));
-      // Marker shown on claimed cars so a red player's train stands out from a red route.
+      g.append(svg('image', {
+        class: 'car', x: -carW / 2, y: -carH / 2, width: carW, height: carH,
+        transform: `${at} rotate(${spriteAngle.toFixed(1)})`,
+      }));
+      // Players without a sprite get a marker so their train stands out from a same-coloured route.
       g.append(svg('circle', { class: 'pip', cx: 0, cy: 0, r: 3.5, transform }));
     }
     const title = svg('title');
@@ -241,6 +261,9 @@ function renderBoard() {
     const fill = owner ? owner.color : COLOR_HEX[r.color];
     g.querySelectorAll('rect').forEach((rect) => rect.setAttribute('fill', fill));
     g.classList.toggle('claimed', !!owner);
+    const sprite = owner && CAR_SPRITES[owner.color];
+    g.classList.toggle('has-sprite', !!sprite);
+    if (sprite) g.querySelectorAll('image.car').forEach((img) => img.setAttribute('href', `cars/${sprite}.png`));
     g.classList.toggle('blocked', !owner && routeBlocked(r));
     g.classList.toggle('clickable', !owner && isMyTurn() && state.drawnThisTurn === 0 && !routeBlocked(r));
     g.querySelector('title').textContent = `${cityName(r.a)} – ${cityName(r.b)}: ${r.len} ${r.color === 'any' ? 'any color' : r.color}${owner ? ` (claimed by ${owner.name})` : ''}`;

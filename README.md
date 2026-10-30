@@ -36,10 +36,13 @@ Games live in memory, so restarting the server ends any games in progress. A ref
 - `shared/map.js`: cities, routes and generated tickets for the test map
 - `server/game.js`: rules engine (all game logic and validation lives here)
 - `server/server.js`: static file server, plus WebSocket rooms
-- `public/`: browser client; `public/cards/` holds the card PNGs exported from the `.aseprite` files
+- `public/`: browser client
+- `TrainCards/` → exported to `public/cards/` (the train cards)
+- `Traincarsprites/` → exported to `public/cars/` (the cars drawn on claimed routes; one per player colour, matched in `CAR_SPRITES` in `public/client.js`)
 
-To re-export the cards after editing them in Aseprite:
+To re-export art after editing it in Aseprite:
 
 ```
-"C:\Program Files (x86)\Steam\steamapps\common\Aseprite\Aseprite.exe" -b RedTrain.aseprite --save-as public/cards/red.png
+"C:\Program Files (x86)\Steam\steamapps\common\Aseprite\Aseprite.exe" -b TrainCards/RedTrain.aseprite --save-as public/cards/red.png
+"C:\Program Files (x86)\Steam\steamapps\common\Aseprite\Aseprite.exe" -b Traincarsprites/redtraincar.aseprite --save-as public/cars/red.png
 ```

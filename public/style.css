@@ -103,6 +103,10 @@ input {
 .route.claimed rect { stroke: #111; stroke-width: 2.5; }
 .route .pip { display: none; fill: #fff; stroke: #111; stroke-width: 1.5; }
 .route.claimed .pip { display: inline; }
+.route .car { display: none; image-rendering: pixelated; pointer-events: none; }
+.route.has-sprite .car { display: inline; }
+.route.has-sprite .pip { display: none; }
+.route.has-sprite rect { fill-opacity: 0.4; stroke-opacity: 0.5; }
 .route.clickable { cursor: pointer; }
 .route.clickable:hover rect { stroke: #000; stroke-width: 3; filter: brightness(1.15); }
 .route.blocked { opacity: 0.35; }
