@@ -272,7 +272,6 @@ class Game {
     if (this.claims[routeId]) throw new GameError('That route is already claimed');
     if (route.sibling && this.claims[route.sibling]) {
       if (this.claims[route.sibling] === player.id) throw new GameError("You can't claim both tracks of a double route");
-      if (this.players.length <= 3) throw new GameError('With 2-3 players only one track of a double route can be used');
     }
     if (player.trains < route.len) throw new GameError('Not enough trains left');
 
@@ -467,7 +466,6 @@ class Game {
       currentPlayerId: this.phase === 'playing' ? this.currentPlayer.id : null,
       drawnThisTurn: this.drawnThisTurn,
       finalTurnsLeft: this.finalTurnsLeft,
-      doubleRoutesLimited: this.players.length <= 3,
       canPass: this.phase === 'playing' && this.canPass(),
       log: this.log.slice(-40),
       hand: me ? me.hand : null,

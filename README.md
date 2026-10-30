@@ -25,7 +25,7 @@ Games live in memory, so restarting the server ends any games in progress. A ref
   - **Draw 2 cards** from the 5 face-up cards or the deck. Taking a face-up rainbow counts as your whole turn, and it can't be your second card. If 3 rainbows are face up, the row is redealt.
   - **Claim a route** by paying cards equal to its length in the route's color. Tan routes take any one color. Rainbows are wild.
   - **Draw 3 tickets** and keep at least 1.
-- Double routes: with 2–3 players only one track can be used; with 4+ different players can take each track. Nobody can take both.
+- Double routes: both tracks can always be claimed, by different players. Nobody can take both.
 - Route points by length: 1→1, 2→2, 3→4, 4→7, 5→10, 6→15.
 - When someone ends a turn with 2 or fewer trains, everyone (including them) gets one final turn.
 - Final scoring: completed tickets add their points, unfinished ones subtract them, and the longest continuous route gets +10.

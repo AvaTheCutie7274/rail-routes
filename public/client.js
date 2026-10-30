@@ -270,7 +270,7 @@ function buildBoard() {
 
 function routeBlocked(r) {
   if (!r.sibling || !state.claims[r.sibling]) return false;
-  return state.doubleRoutesLimited || state.claims[r.sibling] === state.you;
+  return state.claims[r.sibling] === state.you;
 }
 
 function renderBoard() {
@@ -433,7 +433,7 @@ function onRouteClick(route) {
   if (state.claims[route.id]) return;
   if (state.drawnThisTurn > 0) return toast('Finish drawing your second card first');
   if (routeBlocked(route)) {
-    return toast(state.doubleRoutesLimited ? 'With 2–3 players only one track of a double route can be used' : "You can't claim both tracks of a double route");
+    return toast("You can't claim both tracks of a double route");
   }
   if (me().trains < route.len) return toast('Not enough trains left');
 
