@@ -166,6 +166,23 @@ function renderLobby() {
   $('start-btn').disabled = state.players.length < 2;
   $('start-btn').textContent = state.players.length < 2 ? 'Need 2+ players' : `Start game (${state.players.length} players)`;
   $('lobby-wait').classList.toggle('hidden', isHost);
+
+  // Don't overwrite the name box while it's being edited.
+  if (document.activeElement !== $('rename-input')) $('rename-input').value = me().name;
+
+  const select = $('trains-select');
+  if (!select.options.length) {
+    select.append(el('option', { value: 'auto' }));
+    const [min, max] = state.trainsRange;
+    for (let n = min; n <= max; n += 5) select.append(el('option', { value: String(n) }, String(n)));
+  }
+  select.options[0].textContent = `Automatic (${state.autoTrains})`;
+  select.value = state.trainsSetting === null ? 'auto' : String(state.trainsSetting);
+  select.classList.toggle('hidden', !isHost);
+  const trains = state.trainsSetting ?? state.autoTrains;
+  $('trains-info').textContent = state.trainsSetting === null
+    ? `${trains} each — automatic, based on the number of players.`
+    : `${trains} each, set by the host.`;
 }
 
 function renderStatus() {
@@ -485,6 +502,18 @@ $('join-btn').addEventListener('click', () => {
 });
 $('code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('join-btn').click(); });
 $('start-btn').addEventListener('click', () => act('start'));
+const saveName = () => {
+  const name = $('rename-input').value.trim();
+  if (!name || name === me().name) return;
+  try { localStorage.setItem('railRoutesName', name); } catch {}
+  act('rename', { name });
+  $('rename-input').blur();
+};
+$('rename-btn').addEventListener('click', saveName);
+$('rename-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveName(); });
+$('trains-select').addEventListener('change', (e) => {
+  act('setTrains', { trains: e.target.value === 'auto' ? null : Number(e.target.value) });
+});
 $('invite-btn').addEventListener('click', async () => {
   const link = `${location.origin}/?room=${state.code}`;
   try {

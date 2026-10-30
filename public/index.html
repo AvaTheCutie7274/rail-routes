@@ -28,7 +28,19 @@
       <div id="lobby-code" class="room-code"></div>
       <p class="sub">Send this code or the invite link to your friends (2–8 players).</p>
       <button id="invite-btn">Copy invite link</button>
+      <div class="lobby-section">
+        <label class="field-label" for="rename-input">Your name</label>
+        <div class="row">
+          <input id="rename-input" maxlength="20" autocomplete="nickname">
+          <button id="rename-btn">Save</button>
+        </div>
+      </div>
       <ul id="lobby-players" class="lobby-players"></ul>
+      <div class="lobby-section">
+        <label class="field-label" for="trains-select">Trains per player</label>
+        <select id="trains-select"></select>
+        <p id="trains-info" class="sub"></p>
+      </div>
       <button id="start-btn" class="primary">Start game</button>
       <p id="lobby-wait" class="sub">Waiting for the host to start…</p>
       <button id="leave-btn" class="link">Leave room</button>

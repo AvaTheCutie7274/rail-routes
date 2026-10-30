@@ -24,6 +24,10 @@ function trainsPerPlayer(n) {
   return Math.min(30, Math.floor(110 / n));
 }
 
+// Range the host can pick from; below 5 the final round would start almost at once.
+const MIN_TRAINS = 5;
+const MAX_TRAINS = 50;
+
 function buildDeck(playerCount) {
   // Bigger tables get a deck 1.5x the standard size so it doesn't run dry.
   const perColor = playerCount > 5 ? 18 : 12;
@@ -48,6 +52,7 @@ class Game {
     this.players = [];
     this.hostId = null;
     this.log = [];
+    this.trainsSetting = null; // null = automatic for the player count; kept across rematches
     this.resetBoard();
   }
 
@@ -84,13 +89,18 @@ class Game {
     this.addLog('Back to the lobby for another game');
   }
 
+  validName(name, fallback, exceptId = null) {
+    name = String(name || '').trim().slice(0, 20) || fallback;
+    if (this.players.some((p) => p.id !== exceptId && p.name.toLowerCase() === name.toLowerCase())) {
+      throw new GameError('That name is taken in this room');
+    }
+    return name;
+  }
+
   addPlayer(name) {
     if (this.phase !== 'lobby') throw new GameError('Game already started');
     if (this.players.length >= MAX_PLAYERS) throw new GameError('Room is full');
-    name = String(name || '').trim().slice(0, 20) || `Player ${this.players.length + 1}`;
-    if (this.players.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
-      throw new GameError('That name is taken in this room');
-    }
+    name = this.validName(name, `Player ${this.players.length + 1}`);
     const player = {
       id: crypto.randomBytes(6).toString('hex'),
       token: crypto.randomBytes(16).toString('hex'),
@@ -110,6 +120,27 @@ class Game {
     return player;
   }
 
+  rename(player, name) {
+    if (this.phase !== 'lobby') throw new GameError('You can only change your name in the lobby');
+    const newName = this.validName(name, player.name, player.id);
+    if (newName === player.name) return;
+    this.addLog(`${player.name} is now ${newName}`);
+    player.name = newName;
+  }
+
+  setTrains(byId, trains) {
+    if (this.phase !== 'lobby') throw new GameError('Settings can only be changed in the lobby');
+    if (byId !== this.hostId) throw new GameError('Only the host can change settings');
+    if (trains === null) {
+      this.trainsSetting = null;
+      return;
+    }
+    if (!Number.isInteger(trains) || trains < MIN_TRAINS || trains > MAX_TRAINS) {
+      throw new GameError(`Trains must be between ${MIN_TRAINS} and ${MAX_TRAINS}`);
+    }
+    this.trainsSetting = trains;
+  }
+
   removePlayer(playerId) {
     if (this.phase !== 'lobby') return;
     this.players = this.players.filter((p) => p.id !== playerId);
@@ -126,7 +157,7 @@ class Game {
     this.players.forEach((p, i) => (p.color = PLAYER_COLORS[i]));
     this.deck = buildDeck(this.players.length);
     this.ticketDeck = shuffle(TICKETS.map((t) => t.id));
-    const trains = trainsPerPlayer(this.players.length);
+    const trains = this.trainsSetting ?? trainsPerPlayer(this.players.length);
     for (const p of this.players) {
       p.trains = trains;
       for (let i = 0; i < 4; i++) p.hand[this.deck.pop()]++;
@@ -145,6 +176,8 @@ class Game {
     if (!player) throw new GameError('You are not in this game');
     switch (action) {
       case 'start': return this.start(playerId);
+      case 'rename': return this.rename(player, msg.name);
+      case 'setTrains': return this.setTrains(playerId, msg.trains);
       case 'keepTickets': return this.keepTickets(player, msg.ticketIds);
       case 'drawFaceUp': return this.drawFaceUp(player, msg.index);
       case 'drawDeck': return this.drawDeck(player);
@@ -412,6 +445,9 @@ class Game {
         connected: p.connected,
       })),
       market: this.market,
+      trainsSetting: this.trainsSetting,
+      autoTrains: trainsPerPlayer(Math.max(this.players.length, MIN_PLAYERS)),
+      trainsRange: [MIN_TRAINS, MAX_TRAINS],
       // Only whether the deck is empty; players don't get to count it.
       deckEmpty: this.deck.length + this.discard.length === 0,
       ticketDeckCount: this.ticketDeck.length,
