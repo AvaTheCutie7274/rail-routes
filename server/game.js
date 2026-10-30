@@ -44,10 +44,14 @@ class GameError extends Error {}
 class Game {
   constructor(code) {
     this.code = code;
-    this.phase = 'lobby'; // lobby -> initialTickets -> playing -> ended
     this.players = [];
     this.hostId = null;
     this.log = [];
+    this.resetBoard();
+  }
+
+  resetBoard() {
+    this.phase = 'lobby'; // lobby -> initialTickets -> playing -> ended
     this.claims = {}; // routeId -> playerId
     this.deck = [];
     this.discard = [];
@@ -60,6 +64,24 @@ class Game {
   }
 
   // ---------- lobby ----------
+
+  // Back to the lobby with everyone still connected, keeping the room code.
+  playAgain() {
+    if (this.phase !== 'ended') throw new GameError('The game is still in progress');
+    this.resetBoard();
+    this.players = this.players.filter((p) => p.connected);
+    this.players.forEach((p, i) => {
+      p.color = PLAYER_COLORS[i];
+      p.hand = emptyHand();
+      p.tickets = [];
+      p.pendingTickets = null;
+      p.pendingMin = 0;
+      p.trains = 0;
+      p.score = 0;
+    });
+    if (!this.players.some((p) => p.id === this.hostId)) this.hostId = this.players[0]?.id ?? null;
+    this.addLog('Back to the lobby for another game');
+  }
 
   addPlayer(name) {
     if (this.phase !== 'lobby') throw new GameError('Game already started');
@@ -128,6 +150,7 @@ class Game {
       case 'claimRoute': return this.claimRoute(player, msg.routeId, msg.color);
       case 'drawTickets': return this.drawTickets(player);
       case 'pass': return this.pass(player);
+      case 'playAgain': return this.playAgain();
       default: throw new GameError(`Unknown action: ${action}`);
     }
   }

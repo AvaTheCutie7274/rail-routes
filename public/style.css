@@ -77,7 +77,7 @@ input {
 .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 16px; color: #f6efe0; }
 .status { font-size: 17px; font-weight: 600; }
 .status.your-turn { color: #ffd166; }
-.room-tag { color: #b8c4bc; font-size: 13px; white-space: nowrap; }
+.room-tag { color: #b8c4bc; font-size: 13px; white-space: nowrap; align-self: center; }
 
 .layout { flex: 1; display: flex; gap: 12px; padding: 0 12px 12px; min-height: 0; }
 .board-wrap { flex: 1; min-width: 0; background: var(--board); border-radius: var(--radius); overflow: hidden; display: flex; }
@@ -172,6 +172,14 @@ button.card:disabled { opacity: 0.5; }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
 .modal { width: 100%; max-width: 440px; padding: 20px; max-height: 90vh; overflow-y: auto; }
 .modal h3 { margin: 0 0 6px; font-size: 20px; }
+
+/* Docked: sits over the sidebar, leaving the board visible and clickable. */
+.modal-backdrop.docked { background: none; pointer-events: none; align-items: flex-start; justify-content: flex-end; padding: 52px 12px 12px; }
+.modal-backdrop.docked .modal { pointer-events: auto; width: 340px; max-height: calc(100vh - 64px); box-shadow: 0 0 0 3px var(--accent), 0 8px 30px rgba(0, 0, 0, 0.45); }
+@media (max-width: 900px) {
+  .modal-backdrop.docked { align-items: flex-end; justify-content: center; padding: 0; }
+  .modal-backdrop.docked .modal { width: 100%; max-width: none; max-height: 55vh; border-radius: var(--radius) var(--radius) 0 0; }
+}
 .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
 .pay-options { display: flex; flex-direction: column; gap: 6px; }
 .pay-options button { text-align: left; display: flex; align-items: center; gap: 8px; }

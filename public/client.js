@@ -124,10 +124,14 @@ const isMyTurn = () => state.phase === 'playing' && state.currentPlayerId === st
 
 function render() {
   if (state.phase === 'lobby') {
+    // Also covers returning here after "Play again".
+    if (modalKey) closeModal();
+    resultsDismissed = false;
     renderLobby();
     return;
   }
   showScreen('game');
+  $('play-again-btn').classList.toggle('hidden', state.phase !== 'ended');
   if (!boardBuilt) buildBoard();
   renderStatus();
   renderBoard();
@@ -310,14 +314,16 @@ function renderLog() {
 
 // ---------- modals ----------
 
+// A docked modal sits beside the board without dimming it, so the map stays usable.
 function openModal(key, ...content) {
   modalKey = key;
   $('modal').replaceChildren(...content);
-  $('modal-backdrop').classList.remove('hidden');
+  $('modal-backdrop').classList.remove('hidden', 'docked');
 }
 function closeModal() {
   modalKey = null;
   $('modal-backdrop').classList.add('hidden');
+  $('modal-backdrop').classList.remove('docked');
   highlightCities([]);
 }
 
@@ -343,6 +349,10 @@ function showTicketChoice(key) {
   const min = state.pendingMin;
   const keepBtn = el('button', { class: 'primary', onclick: () => act('keepTickets', { ticketIds: [...ticketSelection] }) });
   const list = el('ul', { class: 'tickets' });
+  // Selected tickets stay lit on the map; hovering one shows just that ticket.
+  const showSelected = () => highlightCities(state.pendingTickets
+    .filter((t) => ticketSelection.has(t.id))
+    .flatMap((t) => [t.a, t.b]));
   const refresh = () => {
     list.replaceChildren(...state.pendingTickets.map((t) => ticketItem(t, `ticket-choice ${ticketSelection.has(t.id) ? 'selected' : ''}`, {
       onclick: () => {
@@ -350,17 +360,20 @@ function showTicketChoice(key) {
         else ticketSelection.add(t.id);
         refresh();
       },
+      onmouseleave: showSelected,
     })));
     keepBtn.disabled = ticketSelection.size < min;
     keepBtn.textContent = `Keep ${ticketSelection.size}`;
+    showSelected();
   };
-  refresh();
   openModal(key,
     el('h3', {}, 'Destination tickets'),
-    el('p', { class: 'sub' }, `Keep at least ${min}. Connect the two cities with your own routes by the end to score the points, or lose them. Hover to see the cities on the map.`),
+    el('p', { class: 'sub' }, `Keep at least ${min}. Connect the two cities with your own routes by the end to score the points, or lose them. Selected tickets are highlighted on the map.`),
     list,
     el('div', { class: 'actions' }, keepBtn),
   );
+  $('modal-backdrop').classList.add('docked');
+  refresh();
 }
 
 function paymentOptions(route) {
@@ -425,7 +438,8 @@ function showResults() {
     ))),
     el('div', { class: 'actions' },
       el('button', { onclick: () => { resultsDismissed = true; closeModal(); } }, 'View board'),
-      el('button', { class: 'primary', onclick: () => { clearSession(); location.reload(); } }, 'New game'),
+      el('button', { onclick: () => { clearSession(); location.href = '/'; } }, 'Leave'),
+      el('button', { class: 'primary', onclick: () => act('playAgain') }, 'Play again'),
     ),
   );
 }
@@ -460,6 +474,7 @@ $('invite-btn').addEventListener('click', async () => {
 $('leave-btn').addEventListener('click', () => { clearSession(); location.reload(); });
 $('draw-tickets-btn').addEventListener('click', () => act('drawTickets'));
 $('pass-btn').addEventListener('click', () => act('pass'));
+$('play-again-btn').addEventListener('click', () => act('playAgain'));
 $('modal-backdrop').addEventListener('click', (e) => {
   if (e.target === $('modal-backdrop') && modalKey === 'claim') closeModal();
 });
