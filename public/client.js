@@ -18,6 +18,7 @@ const CAR_SPRITES = {
   '#222222': 'black',
   '#f472b6': 'pink',
   '#f08c00': 'orange',
+  '#14c4b4': 'cyan',
 };
 const SESSION_KEY = 'railRoutesSession';
 const SVG_NS = 'http://www.w3.org/2000/svg';

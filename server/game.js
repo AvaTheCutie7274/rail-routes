@@ -7,8 +7,7 @@ const MARKET_SIZE = 5;
 const LONGEST_ROUTE_BONUS = 10;
 const ROUTE_POINTS = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15 };
 // Matches the train car sprites in public/cars (the client maps colour -> sprite).
-// The 8th colour has no sprite yet and is drawn as plain blocks.
-const PLAYER_COLORS = ['#d62828', '#1d4ed8', '#16a34a', '#facc15', '#222222', '#f472b6', '#f08c00', '#7c3aed'];
+const PLAYER_COLORS = ['#d62828', '#1d4ed8', '#16a34a', '#facc15', '#222222', '#f472b6', '#f08c00', '#14c4b4'];
 const ROUTES_BY_ID = Object.fromEntries(ROUTES.map((r) => [r.id, r]));
 const TICKETS_BY_ID = Object.fromEntries(TICKETS.map((t) => [t.id, t]));
 
