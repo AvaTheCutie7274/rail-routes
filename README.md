@@ -39,6 +39,7 @@ Games live in memory, so restarting the server ends any games in progress. A ref
 - `public/`: browser client
 - `TrainCards/` → exported to `public/cards/` (the train cards)
 - `Traincarsprites/` → exported to `public/cars/` (the cars drawn on claimed routes; one per player colour, matched in `CAR_SPRITES` in `public/client.js`)
+- `TrainSpaces/` → exported to `public/spaces/` (empty track spaces, one per card colour; `Grey` is saved as `any.png` for any-colour routes)
 
 To re-export art after editing it in Aseprite:
 

@@ -103,16 +103,12 @@ select { font: inherit; padding: 8px 10px; border: 1px solid #b9ab8e; border-rad
 .city circle { fill: #fffaf0; stroke: #2a2620; stroke-width: 3; }
 .city text { font-size: 15px; font-weight: 700; fill: #2a2620; paint-order: stroke; stroke: var(--board); stroke-width: 4px; pointer-events: none; }
 .city.hl circle { fill: #ffd166; stroke: var(--accent); stroke-width: 5; }
-.route rect { stroke: #4a4235; stroke-width: 1.5; }
-.route.claimed rect { stroke: #111; stroke-width: 2.5; }
-.route .pip { display: none; fill: #fff; stroke: #111; stroke-width: 1.5; }
-.route.claimed .pip { display: inline; }
-.route .car { display: none; image-rendering: pixelated; pointer-events: none; }
-.route.has-sprite .car { display: inline; }
-.route.has-sprite .pip { display: none; }
-.route.has-sprite rect { fill-opacity: 0.4; stroke-opacity: 0.5; }
+.route image { image-rendering: pixelated; }
+.route .car { display: none; pointer-events: none; }
+.route.claimed .car { display: inline; }
+.route.claimed .space { visibility: hidden; }
 .route.clickable { cursor: pointer; }
-.route.clickable:hover rect { stroke: #000; stroke-width: 3; filter: brightness(1.15); }
+.route.clickable:hover .space { filter: brightness(1.25) drop-shadow(0 0 2px #000); }
 .route.blocked { opacity: 0.35; }
 
 /* ---------- players ---------- */
@@ -138,6 +134,8 @@ select { font: inherit; padding: 8px 10px; border: 1px solid #b9ab8e; border-rad
   padding: 0;
   border: 2px solid transparent;
   background: none;
+  /* Keeps the white card visible against the light panels. */
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 .card img { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
 button.card:hover:not(:disabled) { border-color: #000; background: none; transform: translateY(-2px); }

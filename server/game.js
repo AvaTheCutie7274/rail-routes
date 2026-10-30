@@ -1,13 +1,14 @@
 const crypto = require('crypto');
-const { CARD_COLORS, CITIES, ROUTES, TICKETS } = require('../shared/map');
+const { CARD_COLORS, CITIES, ROUTES, TICKETS, colorName } = require('../shared/map');
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 8;
 const MARKET_SIZE = 5;
 const LONGEST_ROUTE_BONUS = 10;
 const ROUTE_POINTS = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15 };
-// Matches the train car sprites in public/cars (the client maps colour -> sprite).
-const PLAYER_COLORS = ['#d62828', '#1d4ed8', '#16a34a', '#facc15', '#222222', '#f472b6', '#f08c00', '#14c4b4'];
+// Main colour of each train car sprite in public/cars (the client maps colour -> sprite).
+// red, blue, green, yellow, orange, pink, cyan, dark blue. The white car is spare.
+const PLAYER_COLORS = ['#880200', '#247ea7', '#b3dc49', '#fbd44b', '#eb6208', '#faabe3', '#4bebeb', '#021427'];
 const ROUTES_BY_ID = Object.fromEntries(ROUTES.map((r) => [r.id, r]));
 const TICKETS_BY_ID = Object.fromEntries(TICKETS.map((t) => [t.id, t]));
 
@@ -233,7 +234,7 @@ class Game {
     player.hand[card]++;
     this.market[index] = this.drawFromDeck();
     this.refillMarket();
-    this.addLog(`${player.name} took a face-up ${card}`);
+    this.addLog(`${player.name} took a face-up ${colorName(card)}`);
     this.afterCardDraw(card === 'rainbow');
   }
 
@@ -267,7 +268,7 @@ class Game {
 
     if (color !== 'rainbow' && !CARD_COLORS.includes(color)) throw new GameError('Invalid card color');
     if (route.color !== 'any' && color !== route.color && color !== 'rainbow') {
-      throw new GameError(`This route needs ${route.color} cards`);
+      throw new GameError(`This route needs ${colorName(route.color)} cards`);
     }
     const colored = color === 'rainbow' ? 0 : Math.min(player.hand[color], route.len);
     const wilds = route.len - colored;

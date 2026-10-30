@@ -1,6 +1,6 @@
 // Test map: a small fictional region. Coordinates are in a 1000x700 board space.
 
-const CARD_COLORS = ['black', 'blue', 'green', 'orange', 'pink', 'purple', 'red'];
+const CARD_COLORS = ['blue', 'cyan', 'darkblue', 'green', 'orange', 'pink', 'red', 'white', 'yellow'];
 
 const CITIES = {
   northport:   { name: 'Northport',   x: 100, y: 80 },
@@ -29,41 +29,41 @@ const CITIES = {
 const ROUTE_DEFS = [
   ['northport', 'frostwick', 3, 'blue'],
   ['frostwick', 'highcrag', 3, 'red', 'any'],
-  ['highcrag', 'pinehollow', 3, 'green'],
+  ['highcrag', 'pinehollow', 3, 'yellow'],
   ['pinehollow', 'eastmere', 2, 'any'],
   ['northport', 'saltmarsh', 2, 'orange'],
   ['northport', 'ironford', 3, 'any'],
-  ['frostwick', 'ironford', 2, 'purple'],
+  ['frostwick', 'ironford', 2, 'white'],
   ['frostwick', 'millbrook', 3, 'pink'],
-  ['highcrag', 'millbrook', 2, 'black', 'purple'],
+  ['highcrag', 'millbrook', 2, 'darkblue', 'cyan'],
   ['highcrag', 'copperton', 2, 'any'],
-  ['pinehollow', 'copperton', 2, 'orange'],
-  ['eastmere', 'copperton', 3, 'purple'],
+  ['pinehollow', 'copperton', 2, 'cyan'],
+  ['eastmere', 'copperton', 3, 'white'],
   ['eastmere', 'duskvale', 2, 'red', 'green'],
-  ['saltmarsh', 'ironford', 3, 'black'],
+  ['saltmarsh', 'ironford', 3, 'darkblue'],
   ['saltmarsh', 'westhaven', 2, 'any', 'any'],
   ['ironford', 'millbrook', 3, 'any'],
   ['ironford', 'redrock', 3, 'green'],
-  ['ironford', 'westhaven', 4, 'red'],
+  ['ironford', 'westhaven', 4, 'yellow'],
   ['millbrook', 'copperton', 3, 'red'],
   ['millbrook', 'lanternfall', 2, 'blue', 'orange'],
-  ['millbrook', 'redrock', 3, 'black'],
-  ['copperton', 'duskvale', 3, 'pink', 'black'],
+  ['millbrook', 'redrock', 3, 'cyan'],
+  ['copperton', 'duskvale', 3, 'pink', 'darkblue'],
   ['copperton', 'brightwater', 3, 'any'],
-  ['duskvale', 'brightwater', 2, 'purple'],
-  ['duskvale', 'sunreach', 3, 'blue'],
-  ['westhaven', 'redrock', 3, 'pink'],
+  ['duskvale', 'brightwater', 2, 'yellow'],
+  ['duskvale', 'sunreach', 3, 'cyan'],
+  ['westhaven', 'redrock', 3, 'white'],
   ['westhaven', 'coralbay', 2, 'green'],
-  ['redrock', 'lanternfall', 3, 'orange', 'purple'],
+  ['redrock', 'lanternfall', 3, 'orange', 'yellow'],
   ['redrock', 'dunmore', 3, 'red'],
   ['redrock', 'coralbay', 4, 'any'],
-  ['lanternfall', 'brightwater', 3, 'purple'],
+  ['lanternfall', 'brightwater', 3, 'white'],
   ['lanternfall', 'emberfalls', 3, 'any'],
-  ['lanternfall', 'dunmore', 3, 'black'],
+  ['lanternfall', 'dunmore', 3, 'darkblue'],
   ['brightwater', 'sunreach', 3, 'orange'],
-  ['brightwater', 'emberfalls', 3, 'blue', 'red'],
-  ['sunreach', 'southgate', 2, 'pink'],
-  ['coralbay', 'dunmore', 4, 'orange', 'blue'],
+  ['brightwater', 'emberfalls', 3, 'blue', 'pink'],
+  ['sunreach', 'southgate', 2, 'darkblue'],
+  ['coralbay', 'dunmore', 4, 'cyan', 'blue'],
   ['dunmore', 'emberfalls', 4, 'pink'],
   ['emberfalls', 'southgate', 3, 'green', 'any'],
 ];
@@ -116,4 +116,7 @@ function buildTickets() {
 
 const TICKETS = buildTickets();
 
-module.exports = { CARD_COLORS, CITIES, ROUTES, TICKETS };
+// Display name for a card colour id.
+const colorName = (color) => (color === 'darkblue' ? 'dark blue' : color);
+
+module.exports = { CARD_COLORS, CITIES, ROUTES, TICKETS, colorName };

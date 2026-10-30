@@ -1,24 +1,18 @@
-const COLOR_HEX = {
-  black: '#2d2d2d',
-  blue: '#3b82f6',
-  green: '#22a04b',
-  orange: '#f59e0b',
-  pink: '#f472b6',
-  purple: '#9b59b6',
-  red: '#e53e3e',
-  any: '#e8dcc0',
-};
-// Player colour (from the server) -> train car sprite in public/cars. Sprites are 24x12.
+// Player colour (from the server) -> train car sprite in public/cars.
+// Cars and the track spaces in public/spaces are both 36x12, so a car covers its space exactly.
 const CAR_SPRITES = {
-  '#d62828': 'red',
-  '#1d4ed8': 'blue',
-  '#16a34a': 'green',
-  '#facc15': 'yellow',
-  '#222222': 'black',
-  '#f472b6': 'pink',
-  '#f08c00': 'orange',
-  '#14c4b4': 'cyan',
+  '#880200': 'red',
+  '#247ea7': 'blue',
+  '#b3dc49': 'green',
+  '#fbd44b': 'yellow',
+  '#eb6208': 'orange',
+  '#faabe3': 'pink',
+  '#4bebeb': 'cyan',
+  '#021427': 'darkblue',
 };
+const SPRITE_ASPECT = 3;
+const colorName = (color) => (color === 'darkblue' ? 'dark blue' : color);
+const routeColorText = (r) => (r.color === 'any' ? 'any color' : colorName(r.color));
 const SESSION_KEY = 'railRoutesSession';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -38,7 +32,7 @@ const svg = (tag, attrs = {}) => {
   for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
   return node;
 };
-const cardImg = (color) => el('img', { src: `cards/${color}.png`, alt: color });
+const cardImg = (color) => el('img', { src: `cards/${color}.png`, alt: colorName(color) });
 
 let ws;
 let map = null;
@@ -222,34 +216,29 @@ function buildBoard() {
     const length = Math.hypot(dx, dy);
     const ux = dx / length;
     const uy = dy / length;
-    const offset = r.lane * 9;
     const margin = 20;
     const gap = 3;
-    const carLen = (length - 2 * margin - gap * (r.len - 1)) / r.len;
+    const slotLen = (length - 2 * margin - gap * (r.len - 1)) / r.len;
     const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-    // Turn the sprite around on right-to-left routes so its wheels stay at the bottom.
+    // Turn sprites around on right-to-left routes so the cars' wheels stay at the bottom.
     const spriteAngle = Math.abs(angle) > 90 ? angle + 180 : angle;
-    // Sprites keep their 2:1 shape; double routes get smaller ones so the two tracks don't overlap.
-    const carW = Math.min(carLen - 4, r.lane ? 34 : 42);
-    const carH = carW / 2;
+    // Sprites keep their 3:1 shape at one size per route; double tracks sit just far enough apart not to touch.
+    const carW = Math.min(slotLen, 60);
+    const carH = carW / SPRITE_ASPECT;
+    const offset = r.lane * (carH / 2 + 1.5);
 
     const g = svg('g', { class: 'route', 'data-id': r.id });
     for (let i = 0; i < r.len; i++) {
-      const along = margin + carLen / 2 + i * (carLen + gap);
+      const along = margin + slotLen / 2 + i * (slotLen + gap);
       const cx = a.x + ux * along - uy * offset;
       const cy = a.y + uy * along + ux * offset;
-      const at = `translate(${cx.toFixed(1)} ${cy.toFixed(1)})`;
-      const transform = `${at} rotate(${angle.toFixed(1)})`;
-      g.append(svg('rect', { x: -carLen / 2, y: -6, width: carLen, height: 12, rx: 2, transform }));
-      g.append(svg('image', {
-        class: 'car', x: -carW / 2, y: -carH / 2, width: carW, height: carH,
-        transform: `${at} rotate(${spriteAngle.toFixed(1)})`,
-      }));
-      // Players without a sprite get a marker so their train stands out from a same-coloured route.
-      g.append(svg('circle', { class: 'pip', cx: 0, cy: 0, r: 3.5, transform }));
+      const transform = `translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${spriteAngle.toFixed(1)})`;
+      const box = { x: -carW / 2, y: -carH / 2, width: carW, height: carH, transform };
+      g.append(svg('image', { ...box, class: 'space', href: `spaces/${r.color}.png` }));
+      g.append(svg('image', { ...box, class: 'car' }));
     }
     const title = svg('title');
-    title.textContent = `${a.name} – ${b.name}: ${r.len} ${r.color === 'any' ? 'any color' : r.color}`;
+    title.textContent = `${a.name} – ${b.name}: ${r.len} ${routeColorText(r)}`;
     g.append(title);
     g.addEventListener('click', () => onRouteClick(r));
     routeLayer.append(g);
@@ -275,15 +264,11 @@ function renderBoard() {
   for (const r of map.ROUTES) {
     const g = $('board').querySelector(`.route[data-id="${r.id}"]`);
     const owner = state.claims[r.id] && playerById(state.claims[r.id]);
-    const fill = owner ? owner.color : COLOR_HEX[r.color];
-    g.querySelectorAll('rect').forEach((rect) => rect.setAttribute('fill', fill));
     g.classList.toggle('claimed', !!owner);
-    const sprite = owner && CAR_SPRITES[owner.color];
-    g.classList.toggle('has-sprite', !!sprite);
-    if (sprite) g.querySelectorAll('image.car').forEach((img) => img.setAttribute('href', `cars/${sprite}.png`));
+    if (owner) g.querySelectorAll('image.car').forEach((img) => img.setAttribute('href', `cars/${CAR_SPRITES[owner.color]}.png`));
     g.classList.toggle('blocked', !owner && routeBlocked(r));
     g.classList.toggle('clickable', !owner && isMyTurn() && state.drawnThisTurn === 0 && !routeBlocked(r));
-    g.querySelector('title').textContent = `${cityName(r.a)} – ${cityName(r.b)}: ${r.len} ${r.color === 'any' ? 'any color' : r.color}${owner ? ` (claimed by ${owner.name})` : ''}`;
+    g.querySelector('title').textContent = `${cityName(r.a)} – ${cityName(r.b)}: ${r.len} ${routeColorText(r)}${owner ? ` (claimed by ${owner.name})` : ''}`;
   }
 }
 
@@ -310,7 +295,7 @@ function renderMarket() {
     const blocked = color === 'rainbow' && state.drawnThisTurn > 0;
     return el('button', {
       class: 'card',
-      title: blocked ? "Can't take a face-up rainbow as your second card" : `Take ${color}`,
+      title: blocked ? "Can't take a face-up rainbow as your second card" : `Take ${colorName(color)}`,
       disabled: !canDraw || blocked,
       onclick: () => act('drawFaceUp', { index: i }),
     }, cardImg(color));
@@ -327,7 +312,7 @@ function renderMarket() {
 function renderHand() {
   const entries = Object.entries(state.hand).filter(([, n]) => n > 0);
   $('hand').replaceChildren(...(entries.length
-    ? entries.map(([color, n]) => el('div', { class: 'card', title: `${n} ${color}` }, cardImg(color), el('span', { class: 'count' }, String(n))))
+    ? entries.map(([color, n]) => el('div', { class: 'card', title: `${n} ${colorName(color)}` }, cardImg(color), el('span', { class: 'count' }, String(n))))
     : [el('span', { class: 'empty-note' }, 'No cards')]));
   $('draw-tickets-btn').disabled = !isMyTurn() || state.drawnThisTurn > 0 || state.ticketDeckCount === 0;
   $('pass-btn').classList.toggle('hidden', !(isMyTurn() && state.canPass));
@@ -441,7 +426,7 @@ function onRouteClick(route) {
 
   const options = paymentOptions(route);
   const title = `${cityName(route.a)} – ${cityName(route.b)}`;
-  const needs = `${route.len} ${route.color === 'any' ? 'cards of any one color' : route.color + ' cards'} (rainbows are wild)`;
+  const needs = `${route.len} ${route.color === 'any' ? 'cards of any one color' : colorName(route.color) + ' cards'} (rainbows are wild)`;
   openModal('claim',
     el('h3', {}, title),
     el('p', { class: 'sub' }, `Needs ${needs}.`),
@@ -449,7 +434,7 @@ function onRouteClick(route) {
       ? el('div', { class: 'pay-options' }, ...options.map((o) => el('button', {
           onclick: () => { closeModal(); act('claimRoute', { routeId: route.id, color: o.color }); },
         },
-          ...(o.colored ? [cardImg(o.color), `${o.colored} ${o.color}`] : []),
+          ...(o.colored ? [cardImg(o.color), `${o.colored} ${colorName(o.color)}`] : []),
           ...(o.colored && o.wilds ? [' + '] : []),
           ...(o.wilds ? [cardImg('rainbow'), `${o.wilds} rainbow`] : []),
         )))
