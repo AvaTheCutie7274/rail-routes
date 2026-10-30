@@ -412,7 +412,8 @@ class Game {
         connected: p.connected,
       })),
       market: this.market,
-      deckCount: this.deck.length + this.discard.length,
+      // Only whether the deck is empty; players don't get to count it.
+      deckEmpty: this.deck.length + this.discard.length === 0,
       ticketDeckCount: this.ticketDeck.length,
       claims: this.claims,
       currentPlayerId: this.phase === 'playing' ? this.currentPlayer.id : null,

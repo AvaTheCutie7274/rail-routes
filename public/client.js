@@ -301,9 +301,9 @@ function renderMarket() {
   cards.push(el('button', {
     class: 'card deck',
     title: 'Draw from the deck',
-    disabled: !canDraw || state.deckCount === 0,
+    disabled: !canDraw || state.deckEmpty,
     onclick: () => act('drawDeck'),
-  }, 'DECK', el('span', {}, String(state.deckCount))));
+  }, 'DECK'));
   $('market').replaceChildren(...cards);
 }
 
