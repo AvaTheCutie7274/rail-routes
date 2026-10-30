@@ -9,6 +9,7 @@ const CAR_SPRITES = {
   '#faabe3': 'pink',
   '#4bebeb': 'cyan',
   '#021427': 'darkblue',
+  '#ffffff': 'white',
 };
 const SPRITE_ASPECT = 3;
 const colorName = (color) => (color === 'darkblue' ? 'dark blue' : color);
@@ -160,6 +161,18 @@ function renderLobby() {
   $('start-btn').disabled = state.players.length < 2;
   $('start-btn').textContent = state.players.length < 2 ? 'Need 2+ players' : `Start game (${state.players.length} players)`;
   $('lobby-wait').classList.toggle('hidden', isHost);
+
+  $('color-picker').replaceChildren(...state.colorChoices.map((color) => {
+    const owner = state.players.find((p) => p.color === color);
+    const mine = owner && owner.id === state.you;
+    const sprite = CAR_SPRITES[color];
+    return el('button', {
+      class: `color-choice${mine ? ' selected' : ''}`,
+      title: owner ? (mine ? 'Your colour' : `Taken by ${owner.name}`) : `Pick ${colorName(sprite)}`,
+      disabled: !!owner && !mine,
+      onclick: () => { if (!owner) act('pickColor', { color }); },
+    }, el('img', { src: `cars/${sprite}.png`, alt: colorName(sprite) }));
+  }));
 
   // Don't overwrite the name box while it's being edited.
   if (document.activeElement !== $('rename-input')) $('rename-input').value = me().name;

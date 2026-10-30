@@ -69,6 +69,11 @@ input {
 .lobby-section { text-align: left; display: flex; flex-direction: column; gap: 4px; }
 .lobby-section .sub { margin: 0; font-size: 13px; }
 .field-label { font-weight: 600; font-size: 14px; }
+.color-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.color-choice { padding: 6px; display: flex; justify-content: center; border-width: 2px; }
+.color-choice img { width: 72px; height: 24px; image-rendering: pixelated; }
+.color-choice.selected { border-color: var(--accent); background: #fff1d6; box-shadow: inset 0 0 0 1px var(--accent); }
+.color-choice:disabled { opacity: 0.3; }
 select { font: inherit; padding: 8px 10px; border: 1px solid #b9ab8e; border-radius: 8px; background: #fff; width: 100%; }
 .lobby-players { list-style: none; padding: 0; margin: 0; text-align: left; display: flex; flex-direction: column; gap: 6px; }
 .lobby-players li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--panel-2); border-radius: 8px; }

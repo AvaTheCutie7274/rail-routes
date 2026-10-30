@@ -7,8 +7,8 @@ const MARKET_SIZE = 5;
 const LONGEST_ROUTE_BONUS = 10;
 const ROUTE_POINTS = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15 };
 // Main colour of each train car sprite in public/cars (the client maps colour -> sprite).
-// red, blue, green, yellow, orange, pink, cyan, dark blue. The white car is spare.
-const PLAYER_COLORS = ['#880200', '#247ea7', '#b3dc49', '#fbd44b', '#eb6208', '#faabe3', '#4bebeb', '#021427'];
+// red, blue, green, yellow, orange, pink, cyan, dark blue, white. Players pick one in the lobby.
+const PLAYER_COLORS = ['#880200', '#247ea7', '#b3dc49', '#fbd44b', '#eb6208', '#faabe3', '#4bebeb', '#021427', '#ffffff'];
 const ROUTES_BY_ID = Object.fromEntries(ROUTES.map((r) => [r.id, r]));
 const TICKETS_BY_ID = Object.fromEntries(TICKETS.map((t) => [t.id, t]));
 
@@ -77,8 +77,7 @@ class Game {
     if (this.phase !== 'ended') throw new GameError('The game is still in progress');
     this.resetBoard();
     this.players = this.players.filter((p) => p.connected);
-    this.players.forEach((p, i) => {
-      p.color = PLAYER_COLORS[i];
+    this.players.forEach((p) => {
       p.hand = emptyHand();
       p.tickets = [];
       p.pendingTickets = null;
@@ -106,7 +105,7 @@ class Game {
       id: crypto.randomBytes(6).toString('hex'),
       token: crypto.randomBytes(16).toString('hex'),
       name,
-      color: PLAYER_COLORS[this.players.length],
+      color: this.freeColors()[0],
       hand: emptyHand(),
       tickets: [],
       pendingTickets: null,
@@ -119,6 +118,18 @@ class Game {
     if (!this.hostId) this.hostId = player.id;
     this.addLog(`${name} joined`);
     return player;
+  }
+
+  freeColors() {
+    return PLAYER_COLORS.filter((c) => !this.players.some((p) => p.color === c));
+  }
+
+  pickColor(player, color) {
+    if (this.phase !== 'lobby') throw new GameError('You can only change colour in the lobby');
+    if (!PLAYER_COLORS.includes(color)) throw new GameError('Unknown colour');
+    if (color === player.color) return;
+    if (!this.freeColors().includes(color)) throw new GameError('Someone already has that colour');
+    player.color = color;
   }
 
   rename(player, name) {
@@ -145,7 +156,6 @@ class Game {
   removePlayer(playerId) {
     if (this.phase !== 'lobby') return;
     this.players = this.players.filter((p) => p.id !== playerId);
-    this.players.forEach((p, i) => (p.color = PLAYER_COLORS[i]));
     if (this.hostId === playerId) this.hostId = this.players[0]?.id ?? null;
   }
 
@@ -155,7 +165,6 @@ class Game {
     if (this.players.length < MIN_PLAYERS) throw new GameError(`Need at least ${MIN_PLAYERS} players`);
 
     shuffle(this.players);
-    this.players.forEach((p, i) => (p.color = PLAYER_COLORS[i]));
     this.deck = buildDeck(this.players.length);
     this.ticketDeck = shuffle(TICKETS.map((t) => t.id));
     const trains = this.trainsSetting ?? trainsPerPlayer(this.players.length);
@@ -178,6 +187,7 @@ class Game {
     switch (action) {
       case 'start': return this.start(playerId);
       case 'rename': return this.rename(player, msg.name);
+      case 'pickColor': return this.pickColor(player, msg.color);
       case 'setTrains': return this.setTrains(playerId, msg.trains);
       case 'keepTickets': return this.keepTickets(player, msg.ticketIds);
       case 'drawFaceUp': return this.drawFaceUp(player, msg.index);
@@ -446,6 +456,7 @@ class Game {
         connected: p.connected,
       })),
       market: this.market,
+      colorChoices: PLAYER_COLORS,
       trainsSetting: this.trainsSetting,
       autoTrains: trainsPerPlayer(Math.max(this.players.length, MIN_PLAYERS)),
       trainsRange: [MIN_TRAINS, MAX_TRAINS],
