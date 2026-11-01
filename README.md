@@ -36,7 +36,7 @@ Games live in memory, so restarting the server ends any games in progress. A ref
 
 Open `/editor.html` (there's a "Make your own map" link on the home screen).
 
-1. **Load image…** in the Map panel to use a picture as the background. Small images are treated as pixel art and kept sharp.
+1. **Load image…** in the Map panel to use a picture as the background. Small images are treated as pixel art and kept sharp. Under **Edit image** you can rotate 90°, flip, tilt by any angle (to straighten a photo or scan), and **Crop…** by dragging a box. Cities and routes move with the image.
 2. With the **Cities** tool (C), click the map to add a city and type its name. Drag cities to move them.
 3. With the **Routes** tool (R), click a city, click on the map to add bend points, then click the city it goes to. Esc cancels.
 4. Select a route to set its colour (grey = any colour), make it a double route, or change its length. Length is worked out from how long the route is drawn (1–8 spaces); **Track space size** changes that for every route. Drag the white dots to reshape a curve; double-click a route to add a bend, double-click a dot to remove it.

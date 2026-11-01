@@ -5,6 +5,8 @@ const EDITOR_KEY = 'railRoutesEditorMap';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const { BOARD_WIDTH, ROUTE_COLORS, MAX_ROUTE_LEN, MapError, buildMap, colorName } = RailMap;
 const DEFAULT_SPACE = 50;
+const MIN_SPACE = 15;
+const MAX_SPACE = 150;
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024; // bigger images are shrunk before they're stored
 
 const $ = (id) => document.getElementById(id);
@@ -35,6 +37,8 @@ let view = null; // current viewBox { x, y, w, h }
 let undoStack = [];
 let redoStack = [];
 let saveWarned = false;
+let cropping = null; // { rect, start } while choosing the part of the image to keep
+let tilt = 0; // fine rotation being previewed, in degrees
 
 function blankDoc() {
   return { name: 'My map', height: 700, background: null, pixelated: false, spaceSize: DEFAULT_SPACE, cities: [], routes: [] };
@@ -127,6 +131,8 @@ function checkpoint() {
 }
 
 function restore(snap) {
+  tilt = 0;
+  cropping = null;
   doc = { ...JSON.parse(snap.json), background: snap.background };
   if (selected && !(selected.kind === 'city' ? cityById(selected.id) : routeById(selected.id))) selected = null;
   drawing = null;
@@ -212,7 +218,10 @@ canvas.addEventListener('wheel', (e) => {
 const boardRect = svg('rect', { class: 'board-bg', x: 0, y: 0, width: BOARD_WIDTH });
 const bgImage = svg('image', { class: 'bg', x: 0, y: 0, width: BOARD_WIDTH, preserveAspectRatio: 'none' });
 const layer = svg('g');
-canvas.append(boardRect, bgImage, layer);
+// Everything sits in one group so a tilt preview turns cities and routes along with the image.
+const stage = svg('g');
+stage.append(boardRect, bgImage, layer);
+canvas.append(stage);
 
 function renderCanvas() {
   boardRect.setAttribute('height', doc.height);
@@ -221,6 +230,7 @@ function renderCanvas() {
   bgImage.classList.toggle('pixelated', doc.pixelated);
   bgImage.style.display = doc.background ? '' : 'none';
   layer.replaceChildren();
+  stage.setAttribute('transform', tilt ? `rotate(${tilt} ${BOARD_WIDTH / 2} ${doc.height / 2})` : '');
 
   const routeLayer = svg('g');
   for (const r of doc.routes) {
@@ -274,12 +284,23 @@ function renderCanvas() {
     layer.append(svg('polyline', { class: 'draft', points: pts.map((p) => p.join(',')).join(' ') }));
     for (const [x, y] of drawing.bends) layer.append(svg('circle', { class: 'bend draft-bend', cx: x, cy: y, r: 5 }));
   }
+
+  if (cropping && cropping.rect) {
+    // Dim everything outside the crop box.
+    const { x, y, w, h } = cropping.rect;
+    layer.append(svg('path', {
+      class: 'crop-shade', 'fill-rule': 'evenodd',
+      d: `M0 0H${BOARD_WIDTH}V${doc.height}H0Z M${x} ${y}h${w}v${h}h${-w}Z`,
+    }));
+    layer.append(svg('rect', { class: 'crop-box', x, y, width: w, height: h }));
+  }
   renderHint();
 }
 
 function renderHint() {
   let text;
-  if (drawing) text = `From ${cityById(drawing.from).name}: click the map to add bends, then click the city it goes to. Esc cancels.`;
+  if (cropping) text = 'Drag a box over the part of the image to keep, then click Apply crop. Esc cancels.';
+  else if (drawing) text = `From ${cityById(drawing.from).name}: click the map to add bends, then click the city it goes to. Esc cancels.`;
   else if (selected && selected.kind === 'route') text = 'Drag the dots to bend the route. Double-click the route to add a bend, double-click a dot to remove it.';
   else if (tool === 'city') text = doc.background || doc.cities.length ? 'Click the map to add a city. Drag cities to move them.' : 'Start by loading a map image in the panel, then click to add cities.';
   else text = 'Click the city a route starts at.';
@@ -321,6 +342,14 @@ canvas.addEventListener('pointerdown', (e) => {
     return;
   }
   if (e.button !== 0) return;
+  if (cropping) {
+    const pos = clampToBoard(p);
+    cropping.start = pos;
+    cropping.rect = { x: pos.x, y: pos.y, w: 0, h: 0 };
+    canvas.setPointerCapture(e.pointerId);
+    renderCanvas();
+    return;
+  }
   const hit = hitTarget(e);
 
   if (drawing) {
@@ -369,6 +398,13 @@ canvas.addEventListener('pointermove', (e) => {
     return;
   }
   const p = boardPoint(e);
+  if (cropping && cropping.start) {
+    const q = clampToBoard(p);
+    const { start } = cropping;
+    cropping.rect = { x: Math.min(start.x, q.x), y: Math.min(start.y, q.y), w: Math.abs(q.x - start.x), h: Math.abs(q.y - start.y) };
+    renderCanvas();
+    return;
+  }
   if (drag) {
     if (!drag.moved) { checkpoint(); drag.moved = true; }
     if (drag.kind === 'city') {
@@ -389,6 +425,10 @@ canvas.addEventListener('pointermove', (e) => {
 });
 
 function endDrag() {
+  if (cropping && cropping.start) {
+    cropping.start = null;
+    renderPanel();
+  }
   if (drag && drag.moved) changed();
   drag = null;
 }
@@ -455,7 +495,8 @@ const typing = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeEle
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    if (drawing) drawing = null;
+    if (cropping) cropping = null;
+    else if (drawing) drawing = null;
     else selected = null;
     if (typing()) document.activeElement.blur();
     changed();
@@ -502,6 +543,7 @@ function section(title, ...children) {
 function renderPanel() {
   const panel = $('panel');
   const parts = [];
+  if (cropping) parts.push(cropPanel());
   if (selected && selected.kind === 'city') parts.push(cityPanel(cityById(selected.id)));
   if (selected && selected.kind === 'route') parts.push(routePanel(routeById(selected.id)));
   parts.push(mapPanel(), checkPanel(), filePanel());
@@ -569,7 +611,7 @@ function routePanel(r) {
 function mapPanel() {
   const name = el('input', { maxlength: 40, value: doc.name });
   name.addEventListener('change', () => { checkpoint(); doc.name = name.value.trim() || 'My map'; changed(); });
-  const space = el('input', { type: 'range', min: 25, max: 90, step: 1, value: doc.spaceSize });
+  const space = el('input', { type: 'range', min: MIN_SPACE, max: MAX_SPACE, step: 1, value: doc.spaceSize });
   const spaceText = el('span', { class: 'sub' }, String(doc.spaceSize));
   space.addEventListener('pointerdown', () => checkpoint());
   space.addEventListener('keydown', () => checkpoint());
@@ -589,9 +631,147 @@ function mapPanel() {
     doc.background ? el('label', { class: 'check' },
       el('input', { type: 'checkbox', checked: doc.pixelated, onchange: (e) => { doc.pixelated = e.target.checked; changed(); } }),
       'Pixel art (keep it sharp)') : '',
+    doc.background ? imageTools() : '',
     el('span', { class: 'field-label' }, 'Track space size'),
     el('div', { class: 'row range-row' }, space, spaceText),
     el('p', { class: 'sub' }, 'Smaller spaces make every auto-length route longer.'));
+}
+
+function imageTools() {
+  const slider = el('input', { type: 'range', min: -45, max: 45, step: 0.5, value: tilt });
+  const text = el('span', { class: 'sub' }, `${tilt}°`);
+  const apply = el('button', { class: 'small primary', disabled: !tilt, onclick: () => editBackground({ angle: tilt }) }, 'Apply tilt');
+  const reset = el('button', { class: 'small', disabled: !tilt, onclick: () => { tilt = 0; changed(); } }, 'Reset');
+  slider.addEventListener('input', () => {
+    tilt = Number(slider.value);
+    text.textContent = `${tilt}°`;
+    apply.disabled = reset.disabled = !tilt;
+    renderCanvas();
+  });
+  return el('div', { class: 'image-tools' },
+    el('span', { class: 'field-label' }, 'Edit image'),
+    el('div', { class: 'row wrap' },
+      el('button', { class: 'small', title: 'Rotate 90° anticlockwise', onclick: () => editBackground({ angle: -90 }) }, '⟲ 90°'),
+      el('button', { class: 'small', title: 'Rotate 90° clockwise', onclick: () => editBackground({ angle: 90 }) }, '⟳ 90°'),
+      el('button', { class: 'small', title: 'Mirror left to right', onclick: () => editBackground({ flip: true }) }, 'Flip ↔'),
+      el('button', { class: 'small', title: 'Mirror top to bottom', onclick: () => editBackground({ flip: true, angle: 180 }) }, 'Flip ↕'),
+      el('button', { class: 'small', onclick: startCrop }, 'Crop…')),
+    el('span', { class: 'sub' }, 'Tilt (to straighten a photo or scan)'),
+    el('div', { class: 'row range-row' }, slider, text),
+    el('div', { class: 'row' }, apply, reset),
+    el('p', { class: 'sub' }, 'Cities and routes move with the image. Undo works on all of these.'));
+}
+
+function startCrop() {
+  tilt = 0;
+  drawing = null;
+  selected = null;
+  cropping = { rect: null, start: null };
+  changed();
+}
+
+function cropPanel() {
+  const r = cropping.rect;
+  const ok = r && r.w >= 20 && r.h >= 20;
+  return section('Crop image',
+    el('p', { class: 'sub' }, ok ? 'Drag again to redraw the box.' : 'Drag a box over the part of the image to keep.'),
+    el('div', { class: 'row' },
+      el('button', { class: 'primary', disabled: !ok, onclick: () => editBackground({ crop: r }) }, 'Apply crop'),
+      el('button', { onclick: () => { cropping = null; changed(); } }, 'Cancel')));
+}
+
+// ---------- background editing ----------
+
+function decodeImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Could not read the background image'));
+    img.src = src;
+  });
+}
+
+// Crops, rotates (by any angle; flip mirrors first) or mirrors the background into a new image,
+// and moves cities and bend points so they stay on the same spot of the picture.
+async function editBackground({ angle = 0, flip = false, crop = null }) {
+  const img = await decodeImage(doc.background);
+  const W = img.naturalWidth;
+  const H = img.naturalHeight;
+  const k = W / BOARD_WIDTH; // image pixels per board unit
+  const isJpeg = doc.background.startsWith('data:image/jpeg');
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  let mapPoint;
+  let boardW; // new width in old board units; the result is scaled back to BOARD_WIDTH
+
+  if (crop) {
+    c.width = Math.max(1, Math.round(crop.w * k));
+    c.height = Math.max(1, Math.round(crop.h * k));
+    ctx.imageSmoothingEnabled = !doc.pixelated;
+    ctx.drawImage(img, crop.x * k, crop.y * k, crop.w * k, crop.h * k, 0, 0, c.width, c.height);
+    boardW = crop.w;
+    mapPoint = (x, y) => [x - crop.x, y - crop.y];
+  } else {
+    const rad = (angle * Math.PI) / 180;
+    // Rounded so quarter turns come out exact.
+    const cos = Math.round(Math.cos(rad) * 1e9) / 1e9;
+    const sin = Math.round(Math.sin(rad) * 1e9) / 1e9;
+    c.width = Math.round(W * Math.abs(cos) + H * Math.abs(sin));
+    c.height = Math.round(W * Math.abs(sin) + H * Math.abs(cos));
+    ctx.imageSmoothingEnabled = !doc.pixelated;
+    if (isJpeg) {
+      // JPEGs have no transparency, so fill the corners a tilt leaves with the board colour.
+      ctx.fillStyle = '#efe4c8';
+      ctx.fillRect(0, 0, c.width, c.height);
+    }
+    ctx.translate(c.width / 2, c.height / 2);
+    ctx.rotate(rad);
+    ctx.scale(flip ? -1 : 1, 1);
+    ctx.drawImage(img, -W / 2, -H / 2);
+    boardW = BOARD_WIDTH * Math.abs(cos) + doc.height * Math.abs(sin);
+    const boardH = BOARD_WIDTH * Math.abs(sin) + doc.height * Math.abs(cos);
+    mapPoint = (x, y) => {
+      const dx = (flip ? -1 : 1) * (x - BOARD_WIDTH / 2);
+      const dy = y - doc.height / 2;
+      return [dx * cos - dy * sin + boardW / 2, dx * sin + dy * cos + boardH / 2];
+    };
+  }
+
+  const scale = BOARD_WIDTH / boardW;
+  const newHeight = Math.round(c.height * (BOARD_WIDTH / c.width));
+  if (newHeight < 100 || newHeight > 4000) {
+    toast('That would make the map too wide or too tall. Try a different crop.');
+    return;
+  }
+  const dataUrl = c.toDataURL(isJpeg ? 'image/jpeg' : 'image/png', 0.92);
+
+  checkpoint();
+  // Work out every new position before changing the board size the mapping depends on.
+  const move = ([x, y]) => mapPoint(x, y).map((v) => v * scale);
+  const cityMoves = doc.cities.map((city) => move([city.x, city.y]));
+  const routeMoves = doc.routes.map((r) => r.points.map(move));
+  doc.height = newHeight;
+  let clamped = 0;
+  doc.cities.forEach((city, i) => {
+    const [x, y] = cityMoves[i];
+    const pos = clampToBoard({ x, y });
+    if (pos.x !== x || pos.y !== y) clamped++;
+    Object.assign(city, pos);
+  });
+  doc.routes.forEach((r, i) => {
+    r.points = routeMoves[i].map(([x, y]) => {
+      const q = clampToBoard({ x, y });
+      return [q.x, q.y];
+    });
+  });
+  // Keep routes the same number of spaces now that the board is zoomed in or out.
+  doc.spaceSize = Math.max(MIN_SPACE, Math.min(MAX_SPACE, Math.round(doc.spaceSize * scale)));
+  doc.background = dataUrl;
+  tilt = 0;
+  cropping = null;
+  fitView();
+  changed();
+  if (clamped) toast(`${clamped} ${clamped === 1 ? 'city was' : 'cities were'} outside the image and moved to its edge.`, 5000);
 }
 
 function checkPanel() {

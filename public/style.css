@@ -261,3 +261,6 @@ button.danger { color: var(--accent); }
   .canvas-wrap { flex: none; height: 70vh; }
   .editor-panel { width: 100%; }
 }
+.crop-shade { fill: rgba(0, 0, 0, 0.55); pointer-events: none; }
+.crop-box { fill: none; stroke: #fff; stroke-width: 2; stroke-dasharray: 8 5; pointer-events: none; }
+.image-tools { display: flex; flex-direction: column; gap: 6px; padding: 8px; background: var(--panel-2); border-radius: 8px; }
