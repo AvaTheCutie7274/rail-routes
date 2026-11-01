@@ -1,5 +1,6 @@
 // Player colour (from the server) -> train car sprite in public/cars.
 // Cars and the track spaces in public/spaces are both 36x12, so a car covers its space exactly.
+// Where the spaces go is worked out in layout.js.
 const CAR_SPRITES = {
   '#880200': 'red',
   '#247ea7': 'blue',
@@ -11,10 +12,10 @@ const CAR_SPRITES = {
   '#021427': 'darkblue',
   '#ffffff': 'white',
 };
-const SPRITE_ASPECT = 3;
 const colorName = (color) => (color === 'darkblue' ? 'dark blue' : color);
 const routeColorText = (r) => (r.color === 'any' ? 'any color' : colorName(r.color));
 const SESSION_KEY = 'railRoutesSession';
+const EDITOR_KEY = 'railRoutesEditorMap'; // the map editor's saved work
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const $ = (id) => document.getElementById(id);
@@ -84,8 +85,12 @@ const act = (action, extra = {}) => send({ type: 'action', action, ...extra });
 function onMessage(msg) {
   switch (msg.type) {
     case 'welcome':
-      map = msg.map;
       saveSession(msg.code, msg.token);
+      break;
+    case 'map':
+      map = msg.map;
+      boardBuilt = false;
+      if (state) render();
       break;
     case 'rejoinFailed': {
       const session = loadSession();
@@ -177,6 +182,8 @@ function renderLobby() {
   // Don't overwrite the name box while it's being edited.
   if (document.activeElement !== $('rename-input')) $('rename-input').value = me().name;
 
+  renderMapChoice(isHost);
+
   const select = $('trains-select');
   if (!select.options.length) {
     select.append(el('option', { value: 'auto' }));
@@ -190,6 +197,20 @@ function renderLobby() {
   $('trains-info').textContent = state.trainsSetting === null
     ? `${trains} each — automatic, based on the number of players.`
     : `${trains} each, set by the host.`;
+}
+
+function editorMap() {
+  try { return JSON.parse(localStorage.getItem(EDITOR_KEY)); } catch { return null; }
+}
+
+function renderMapChoice(isHost) {
+  const size = map ? ` — ${Object.keys(map.CITIES).length} cities, ${map.ROUTES.length} tracks, ${map.TICKETS.length} tickets` : '';
+  $('map-info').textContent = state.mapName + size;
+  $('map-controls').classList.toggle('hidden', !isHost);
+  const draft = isHost && editorMap();
+  $('map-editor-btn').classList.toggle('hidden', !draft);
+  if (draft) $('map-editor-btn').textContent = `Use "${draft.name || 'Untitled map'}" from editor`;
+  $('map-default-btn').classList.toggle('hidden', state.mapIsDefault);
 }
 
 function renderStatus() {
@@ -221,31 +242,21 @@ function buildBoard() {
   const cityLayer = svg('g');
   board.append(routeLayer, cityLayer);
 
+  board.setAttribute('viewBox', `0 0 ${map.width} ${map.height}`);
+  board.parentElement.style.setProperty('--board-aspect', `${map.width} / ${map.height}`);
+  if (map.background) {
+    routeLayer.before(svg('image', { href: map.background, width: map.width, height: map.height, preserveAspectRatio: 'none', class: map.pixelated ? 'pixelated' : '' }));
+  }
+
   for (const r of map.ROUTES) {
     const a = map.CITIES[r.a];
     const b = map.CITIES[r.b];
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const length = Math.hypot(dx, dy);
-    const ux = dx / length;
-    const uy = dy / length;
-    const margin = 20;
-    const gap = 3;
-    const slotLen = (length - 2 * margin - gap * (r.len - 1)) / r.len;
-    const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-    // Turn sprites around on right-to-left routes so the cars' wheels stay at the bottom.
-    const spriteAngle = Math.abs(angle) > 90 ? angle + 180 : angle;
     // Sprites keep their 3:1 shape at one size per route; double tracks sit just far enough apart not to touch.
-    const carW = Math.min(slotLen, 60);
-    const carH = carW / SPRITE_ASPECT;
-    const offset = r.lane * (carH / 2 + 1.5);
+    const { slots, carW, carH } = RouteLayout.slots(a, b, r.points, r.len, r.lane);
 
     const g = svg('g', { class: 'route', 'data-id': r.id });
-    for (let i = 0; i < r.len; i++) {
-      const along = margin + slotLen / 2 + i * (slotLen + gap);
-      const cx = a.x + ux * along - uy * offset;
-      const cy = a.y + uy * along + ux * offset;
-      const transform = `translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${spriteAngle.toFixed(1)})`;
+    for (const slot of slots) {
+      const transform = `translate(${slot.x.toFixed(1)} ${slot.y.toFixed(1)}) rotate(${slot.angle.toFixed(1)})`;
       const box = { x: -carW / 2, y: -carH / 2, width: carW, height: carH, transform };
       g.append(svg('image', { ...box, class: 'space', href: `spaces/${r.color}.png` }));
       g.append(svg('image', { ...box, class: 'car' }));
@@ -521,6 +532,23 @@ $('invite-btn').addEventListener('click', async () => {
     prompt('Copy this invite link:', link);
   }
 });
+$('map-editor-btn').addEventListener('click', () => {
+  const draft = editorMap();
+  if (draft) act('setMap', { map: draft });
+  else toast('No map in the editor yet');
+});
+$('map-file-btn').addEventListener('click', () => $('map-file').click());
+$('map-file').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    act('setMap', { map: JSON.parse(await file.text()) });
+  } catch {
+    toast('That file is not a map');
+  }
+});
+$('map-default-btn').addEventListener('click', () => act('setMap', { map: null }));
 $('leave-btn').addEventListener('click', () => { clearSession(); location.reload(); });
 $('draw-tickets-btn').addEventListener('click', () => act('drawTickets'));
 $('pass-btn').addEventListener('click', () => act('pass'));

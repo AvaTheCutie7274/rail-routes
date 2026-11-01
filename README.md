@@ -29,11 +29,26 @@ Games live in memory, so restarting the server ends any games in progress. A ref
 - Route points by length: 1→1, 2→2, 3→4, 4→7, 5→10, 6→15.
 - When someone ends a turn with 2 or fewer trains, everyone (including them) gets one final turn.
 - Final scoring: completed tickets add their points, unfinished ones subtract them, and the longest continuous route gets +10.
-- Trains per player shrink with table size because the test map is small (30 for 2–3 players, down to 13 for 8). With 6+ players the deck is 1.5× larger.
+- Route points by length continue for long custom routes: 7→18, 8→21.
+- Trains per player shrink with table size (30 for 2–3 players on the test map, down to 13 for 8; bigger or smaller maps scale this). With 6+ players the deck is 1.5× larger.
+
+## Map editor
+
+Open `/editor.html` (there's a "Make your own map" link on the home screen).
+
+1. **Load image…** in the Map panel to use a picture as the background. Small images are treated as pixel art and kept sharp.
+2. With the **Cities** tool (C), click the map to add a city and type its name. Drag cities to move them.
+3. With the **Routes** tool (R), click a city, click on the map to add bend points, then click the city it goes to. Esc cancels.
+4. Select a route to set its colour (grey = any colour), make it a double route, or change its length. Length is worked out from how long the route is drawn (1–8 spaces); **Track space size** changes that for every route. Drag the white dots to reshape a curve; double-click a route to add a bend, double-click a dot to remove it.
+5. The **Ready to play?** box lists problems, such as cities with no routes or too few tickets. Tickets are generated automatically from the routes.
+
+Work is saved in the browser as you go, and **Save map file** downloads a `.railmap.json` file. In a game lobby the host clicks **Use "…" from editor** (same browser) or **Load map file…** (any browser). Trains per player scale with how much track the map has.
 
 ## Project layout
 
-- `shared/map.js`: cities, routes and generated tickets for the test map
+- `shared/map.js`: the test map, and the code that checks any map and builds its routes and tickets (used by the server and the editor)
+- `public/layout.js`: where track spaces go along a (possibly curved) route
+- `public/editor.html`, `public/editor.js`: the map editor
 - `server/game.js`: rules engine (all game logic and validation lives here)
 - `server/server.js`: static file server, plus WebSocket rooms
 - `public/`: browser client

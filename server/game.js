@@ -1,16 +1,14 @@
 const crypto = require('crypto');
-const { CARD_COLORS, CITIES, ROUTES, TICKETS, colorName } = require('../shared/map');
+const { CARD_COLORS, DEFAULT, buildMap, MapError, colorName } = require('../shared/map');
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 8;
 const MARKET_SIZE = 5;
 const LONGEST_ROUTE_BONUS = 10;
-const ROUTE_POINTS = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15 };
+const ROUTE_POINTS = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15, 7: 18, 8: 21 };
 // Main colour of each train car sprite in public/cars (the client maps colour -> sprite).
 // red, blue, green, yellow, orange, pink, cyan, dark blue, white. Players pick one in the lobby.
 const PLAYER_COLORS = ['#880200', '#247ea7', '#b3dc49', '#fbd44b', '#eb6208', '#faabe3', '#4bebeb', '#021427', '#ffffff'];
-const ROUTES_BY_ID = Object.fromEntries(ROUTES.map((r) => [r.id, r]));
-const TICKETS_BY_ID = Object.fromEntries(TICKETS.map((t) => [t.id, t]));
 
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -20,9 +18,12 @@ function shuffle(arr) {
   return arr;
 }
 
-// The test map is small, so each player gets fewer trains as the table grows.
-function trainsPerPlayer(n) {
-  return Math.min(30, Math.floor(110 / n));
+// Each player gets fewer trains as the table grows, scaled to how much track the map has
+// (the test map's 136 spaces give 30 for 2–3 players, down to 13 for 8).
+function trainsPerPlayer(n, totalSpaces) {
+  const scale = totalSpaces / 136;
+  const trains = Math.min(Math.round(30 * scale), Math.floor((110 * scale) / n));
+  return Math.max(MIN_TRAINS, Math.min(MAX_TRAINS, trains));
 }
 
 // Range the host can pick from; below 5 the final round would start almost at once.
@@ -54,6 +55,7 @@ class Game {
     this.hostId = null;
     this.log = [];
     this.trainsSetting = null; // null = automatic for the player count; kept across rematches
+    this.useMap(DEFAULT);
     this.resetBoard();
   }
 
@@ -153,6 +155,30 @@ class Game {
     this.trainsSetting = trains;
   }
 
+  useMap(map) {
+    this.map = map;
+    this.mapVersion = (this.mapVersion || 0) + 1;
+    this.routesById = Object.fromEntries(map.ROUTES.map((r) => [r.id, r]));
+    this.ticketsById = Object.fromEntries(map.TICKETS.map((t) => [t.id, t]));
+  }
+
+  // def: a map made in the map editor, or null for the built-in map.
+  setMap(byId, def) {
+    if (this.phase !== 'lobby') throw new GameError('The map can only be changed in the lobby');
+    if (byId !== this.hostId) throw new GameError('Only the host can change the map');
+    if (def === null) {
+      this.useMap(DEFAULT);
+    } else {
+      try {
+        this.useMap(buildMap(def));
+      } catch (err) {
+        if (err instanceof MapError) throw new GameError(err.message);
+        throw err;
+      }
+    }
+    this.addLog(`Map: ${this.map.name}`);
+  }
+
   removePlayer(playerId) {
     if (this.phase !== 'lobby') return;
     this.players = this.players.filter((p) => p.id !== playerId);
@@ -163,11 +189,14 @@ class Game {
     if (this.phase !== 'lobby') throw new GameError('Game already started');
     if (byId !== this.hostId) throw new GameError('Only the host can start the game');
     if (this.players.length < MIN_PLAYERS) throw new GameError(`Need at least ${MIN_PLAYERS} players`);
+    if (this.map.TICKETS.length < this.players.length * 3) {
+      throw new GameError(`This map only has ${this.map.TICKETS.length} tickets, not enough for ${this.players.length} players`);
+    }
 
     shuffle(this.players);
     this.deck = buildDeck(this.players.length);
-    this.ticketDeck = shuffle(TICKETS.map((t) => t.id));
-    const trains = this.trainsSetting ?? trainsPerPlayer(this.players.length);
+    this.ticketDeck = shuffle(this.map.TICKETS.map((t) => t.id));
+    const trains = this.trainsSetting ?? trainsPerPlayer(this.players.length, this.map.totalSpaces);
     for (const p of this.players) {
       p.trains = trains;
       for (let i = 0; i < 4; i++) p.hand[this.deck.pop()]++;
@@ -189,6 +218,7 @@ class Game {
       case 'rename': return this.rename(player, msg.name);
       case 'pickColor': return this.pickColor(player, msg.color);
       case 'setTrains': return this.setTrains(playerId, msg.trains);
+      case 'setMap': return this.setMap(playerId, msg.map);
       case 'keepTickets': return this.keepTickets(player, msg.ticketIds);
       case 'drawFaceUp': return this.drawFaceUp(player, msg.index);
       case 'drawDeck': return this.drawDeck(player);
@@ -267,7 +297,7 @@ class Game {
   claimRoute(player, routeId, color) {
     this.assertTurn(player);
     if (this.drawnThisTurn > 0) throw new GameError('Finish drawing your second card');
-    const route = ROUTES_BY_ID[routeId];
+    const route = this.routesById[routeId];
     if (!route) throw new GameError('Unknown route');
     if (this.claims[routeId]) throw new GameError('That route is already claimed');
     if (route.sibling && this.claims[route.sibling]) {
@@ -295,7 +325,7 @@ class Game {
     this.claims[routeId] = player.id;
     player.trains -= route.len;
     player.score += ROUTE_POINTS[route.len];
-    this.addLog(`${player.name} claimed ${CITIES[route.a].name} – ${CITIES[route.b].name} (+${ROUTE_POINTS[route.len]})`);
+    this.addLog(`${player.name} claimed ${this.map.CITIES[route.a].name} – ${this.map.CITIES[route.b].name} (+${ROUTE_POINTS[route.len]})`);
     this.endTurn();
   }
 
@@ -363,7 +393,7 @@ class Game {
   // ---------- scoring ----------
 
   playerRoutes(playerId) {
-    return ROUTES.filter((r) => this.claims[r.id] === playerId);
+    return this.map.ROUTES.filter((r) => this.claims[r.id] === playerId);
   }
 
   isConnected(playerId, from, to) {
@@ -406,7 +436,7 @@ class Game {
     const lengths = Object.fromEntries(this.players.map((p) => [p.id, this.longestPath(p.id)]));
     const longest = Math.max(...Object.values(lengths));
     this.results = this.players.map((p) => {
-      const tickets = p.tickets.map((id) => ({ ...TICKETS_BY_ID[id], completed: this.isConnected(p.id, TICKETS_BY_ID[id].a, TICKETS_BY_ID[id].b) }));
+      const tickets = p.tickets.map((id) => ({ ...this.ticketsById[id], completed: this.isConnected(p.id, this.ticketsById[id].a, this.ticketsById[id].b) }));
       const ticketPoints = tickets.reduce((s, t) => s + (t.completed ? t.points : -t.points), 0);
       const hasLongest = longest > 0 && lengths[p.id] === longest;
       const bonus = hasLongest ? LONGEST_ROUTE_BONUS : 0;
@@ -435,8 +465,8 @@ class Game {
   viewFor(playerId) {
     const me = this.players.find((p) => p.id === playerId);
     const ticketView = (id) => ({
-      ...TICKETS_BY_ID[id],
-      completed: this.phase !== 'lobby' && this.isConnected(playerId, TICKETS_BY_ID[id].a, TICKETS_BY_ID[id].b),
+      ...this.ticketsById[id],
+      completed: this.phase !== 'lobby' && this.isConnected(playerId, this.ticketsById[id].a, this.ticketsById[id].b),
     });
     return {
       code: this.code,
@@ -457,7 +487,10 @@ class Game {
       market: this.market,
       colorChoices: PLAYER_COLORS,
       trainsSetting: this.trainsSetting,
-      autoTrains: trainsPerPlayer(Math.max(this.players.length, MIN_PLAYERS)),
+      autoTrains: trainsPerPlayer(Math.max(this.players.length, MIN_PLAYERS), this.map.totalSpaces),
+      mapName: this.map.name,
+      mapVersion: this.mapVersion,
+      mapIsDefault: this.map === DEFAULT,
       trainsRange: [MIN_TRAINS, MAX_TRAINS],
       // Only whether the deck is empty; players don't get to count it.
       deckEmpty: this.deck.length + this.discard.length === 0,

@@ -4,10 +4,10 @@ const path = require('path');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const { Game, GameError } = require('./game');
-const MAP = require('../shared/map');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+const SHARED_DIR = path.join(__dirname, '..', 'shared');
 const ROOM_IDLE_MS = 2 * 60 * 60 * 1000; // drop rooms nobody is connected to after 2h
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -21,8 +21,10 @@ const MIME = {
 
 const server = http.createServer((req, res) => {
   const urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-  const filePath = path.join(PUBLIC_DIR, urlPath === '/' ? 'index.html' : urlPath);
-  if (!filePath.startsWith(PUBLIC_DIR)) {
+  // /shared/ holds code the browser and server both use (map building and checking).
+  const [root, rel] = urlPath.startsWith('/shared/') ? [SHARED_DIR, urlPath.slice(7)] : [PUBLIC_DIR, urlPath === '/' ? 'index.html' : urlPath];
+  const filePath = path.join(root, rel);
+  if (!filePath.startsWith(root + path.sep)) {
     res.writeHead(403).end();
     return;
   }
@@ -55,6 +57,11 @@ function broadcast(room) {
   }
 }
 
+// The map (with its background image) is only sent when it changes, not with every state.
+function sendMap(ws, game) {
+  send(ws, { type: 'map', map: game.map, version: game.mapVersion });
+}
+
 function send(ws, msg) {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
 }
@@ -67,7 +74,8 @@ function attach(ws, room, player) {
   player.connected = true;
   ws.room = room;
   ws.playerId = player.id;
-  send(ws, { type: 'welcome', code: room.game.code, playerId: player.id, token: player.token, map: MAP });
+  send(ws, { type: 'welcome', code: room.game.code, playerId: player.id, token: player.token });
+  sendMap(ws, room.game);
   broadcast(room);
 }
 
@@ -111,7 +119,10 @@ function handleMessage(ws, msg) {
     }
     case 'action': {
       if (!ws.room) throw new GameError('Join a room first');
-      ws.room.game.handle(ws.playerId, msg.action, msg);
+      const { game } = ws.room;
+      const mapVersion = game.mapVersion;
+      game.handle(ws.playerId, msg.action, msg);
+      if (game.mapVersion !== mapVersion) for (const s of ws.room.sockets.values()) sendMap(s, game);
       broadcast(ws.room);
       return;
     }
@@ -120,7 +131,8 @@ function handleMessage(ws, msg) {
   }
 }
 
-const wss = new WebSocketServer({ server });
+// Large enough for a map upload with its background image.
+const wss = new WebSocketServer({ server, maxPayload: 16 * 1024 * 1024 });
 wss.on('connection', (ws) => {
   ws.on('message', (data) => {
     let msg;

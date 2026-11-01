@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rail Routes Map Editor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="editor">
+  <header class="editor-bar">
+    <strong class="editor-title">Map editor</strong>
+    <div class="tools" role="group" aria-label="Tool">
+      <button id="tool-city" class="tool" title="Click the map to add a city, drag a city to move it (C)">Cities</button>
+      <button id="tool-route" class="tool" title="Click a city, click the map to add bends, click another city to finish (R)">Routes</button>
+    </div>
+    <div class="row">
+      <button id="undo-btn" class="small" title="Undo (Ctrl+Z)">Undo</button>
+      <button id="redo-btn" class="small" title="Redo (Ctrl+Y)">Redo</button>
+      <button id="fit-btn" class="small" title="Show the whole map">Fit</button>
+    </div>
+    <span id="hint" class="hint"></span>
+    <a class="back-link" href="./">Back to the game</a>
+  </header>
+  <main class="editor-main">
+    <div id="canvas-wrap" class="canvas-wrap">
+      <svg id="canvas" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <aside id="panel" class="editor-panel"></aside>
+  </main>
+  <input id="bg-file" type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+  <input id="map-file" type="file" accept=".json,application/json" hidden>
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="shared/map.js"></script>
+  <script src="layout.js"></script>
+  <script src="editor.js"></script>
+</body>
+</html>

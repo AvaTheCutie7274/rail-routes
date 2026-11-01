@@ -75,6 +75,8 @@ input {
 .color-choice.selected { border-color: var(--accent); background: #fff1d6; box-shadow: inset 0 0 0 1px var(--accent); }
 .color-choice:disabled { opacity: 0.3; }
 select { font: inherit; padding: 8px 10px; border: 1px solid #b9ab8e; border-radius: 8px; background: #fff; width: 100%; }
+.map-controls { display: flex; flex-wrap: wrap; gap: 6px; }
+.editor-link { color: var(--muted); font-size: 13px; }
 .lobby-players { list-style: none; padding: 0; margin: 0; text-align: left; display: flex; flex-direction: column; gap: 6px; }
 .lobby-players li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--panel-2); border-radius: 8px; }
 
@@ -98,7 +100,7 @@ select { font: inherit; padding: 8px 10px; border: 1px solid #b9ab8e; border-rad
 
 @media (max-width: 900px) {
   .layout { flex-direction: column; }
-  .board-wrap { flex: none; aspect-ratio: 10 / 7; }
+  .board-wrap { flex: none; aspect-ratio: var(--board-aspect, 10 / 7); }
   .sidebar { width: 100%; overflow: visible; }
   #game { height: auto; }
 }
@@ -204,3 +206,58 @@ button.card:disabled { opacity: 0.5; }
 .result-tickets h4 { margin: 0 0 4px; display: flex; align-items: center; gap: 6px; }
 
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2a2620; color: #fff; padding: 10px 18px; border-radius: 8px; z-index: 20; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); }
+image.pixelated { image-rendering: pixelated; }
+
+/* ---------- map editor ---------- */
+
+body.editor { display: flex; flex-direction: column; height: 100%; }
+.editor-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 16px; color: #f6efe0; }
+.editor-title { font-size: 17px; }
+.tools { display: flex; }
+.tools .tool { border-radius: 0; }
+.tools .tool:first-child { border-radius: 8px 0 0 8px; }
+.tools .tool:last-child { border-radius: 0 8px 8px 0; }
+.tools .tool.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.hint { flex: 1; min-width: 200px; color: #d8e0da; font-size: 13px; }
+.back-link { color: #b8c4bc; font-size: 13px; }
+.editor-main { flex: 1; display: flex; gap: 12px; padding: 0 12px 12px; min-height: 0; }
+.canvas-wrap { flex: 1; min-width: 0; background: #16201b; border-radius: var(--radius); overflow: hidden; display: flex; }
+#canvas { width: 100%; height: 100%; user-select: none; touch-action: none; cursor: crosshair; }
+#canvas.panning { cursor: grab; }
+#canvas .board-bg { fill: var(--board); }
+#canvas image { image-rendering: pixelated; }
+#canvas image.bg:not(.pixelated) { image-rendering: auto; }
+#canvas .city { cursor: pointer; }
+.ed-route { cursor: pointer; }
+.ed-route .hit { fill: none; stroke: transparent; stroke-width: 18; stroke-linecap: round; stroke-linejoin: round; }
+.ed-route:hover .hit { stroke: rgba(255, 209, 102, 0.35); }
+.ed-route.selected .hit { stroke: rgba(192, 57, 43, 0.4); }
+.bend { fill: #fff; stroke: var(--accent); stroke-width: 3; cursor: move; }
+.draft { fill: none; stroke: var(--accent); stroke-width: 3; stroke-dasharray: 8 6; pointer-events: none; }
+.draft-bend { pointer-events: none; }
+.editor-panel { width: 320px; flex: none; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.editor-panel .box { display: flex; flex-direction: column; gap: 8px; }
+.editor-panel .box h2 { margin: 0; }
+.editor-panel .sub { margin: 0; font-size: 13px; }
+.field { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: 14px; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.check input { width: auto; }
+.row.wrap { flex-wrap: wrap; }
+.range-row { align-items: center; }
+.range-row input { padding: 0; }
+.swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.swatch-btn { padding: 6px 4px; display: flex; justify-content: center; border-width: 2px; }
+.swatch-btn img { width: 42px; height: 14px; image-rendering: pixelated; }
+.swatch-btn.selected { border-color: var(--accent); background: #fff1d6; }
+.len-row { display: flex; align-items: center; gap: 10px; }
+.warn { margin: 0; font-size: 13px; color: #8a4b00; background: #fff3d6; border-radius: 6px; padding: 6px 8px; }
+.good { margin: 0; font-size: 13px; color: var(--good); font-weight: 600; }
+button.danger { color: var(--accent); }
+.editor .toast { max-width: 90vw; }
+
+@media (max-width: 900px) {
+  body.editor { height: auto; }
+  .editor-main { flex-direction: column; }
+  .canvas-wrap { flex: none; height: 70vh; }
+  .editor-panel { width: 100%; }
+}

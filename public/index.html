@@ -19,6 +19,7 @@
         <button id="join-btn">Join</button>
       </div>
       <p id="home-error" class="error"></p>
+      <a class="editor-link" href="editor.html">Make your own map →</a>
     </div>
   </section>
 
@@ -40,6 +41,17 @@
         <div id="color-picker" class="color-picker"></div>
       </div>
       <ul id="lobby-players" class="lobby-players"></ul>
+      <div class="lobby-section">
+        <span class="field-label">Map</span>
+        <p id="map-info" class="sub"></p>
+        <div id="map-controls" class="map-controls">
+          <button id="map-editor-btn" class="small">Use map from editor</button>
+          <button id="map-file-btn" class="small">Load map file…</button>
+          <button id="map-default-btn" class="small">Use test map</button>
+          <input id="map-file" type="file" accept=".json,application/json" hidden>
+        </div>
+        <a class="editor-link" href="editor.html" target="_blank">Open the map editor</a>
+      </div>
       <div class="lobby-section">
         <label class="field-label" for="trains-select">Trains per player</label>
         <select id="trains-select"></select>
@@ -99,6 +111,7 @@
   </div>
   <div id="toast" class="toast hidden"></div>
 
+  <script src="layout.js"></script>
   <script src="client.js"></script>
 </body>
 </html>
